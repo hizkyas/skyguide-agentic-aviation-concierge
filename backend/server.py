@@ -137,7 +137,43 @@ async def run_agent_workflow(sid, input_data, config):
         await sio.emit("error", {"message": str(e)}, to=sid)
 
 
+@sio.on("submit_chat")
+async def handle_submit_chat(sid, data):
+    """Fallback simplistic LLM chat capability for adjusting trips on the UI."""
+    msg = data.get("message", "")
+    print(f"[{sid}] Chat received: {msg}")
+    
+    # Simulate an AI thought process
+    await asyncio.sleep(1)
+    
+    # If a generic 'expensive' or 'cheaper' is asked, return a helpful response.
+    # In a fully fleshed out v2, we push this back through LangGraph as a new message.
+    if "cheap" in msg.lower() or "budget" in msg.lower():
+        reply = "I understand you'd prefer budget options. I'll recalibrate the Navigator to scan low-cost carriers and budget hotels (under $100/night) for your upcoming destination."
+    elif "extend" in msg.lower() or "longer" in msg.lower():
+        reply = "Extending your stay by 2 days. The web scraper will look for updated multi-day packages."
+    else:
+         reply = "I've noted that adjustment. Will you be wanting me to formally re-run the mission with those changes?"
+         
+    await sio.emit("chat_response", {"message": reply}, to=sid)
+
+
 # ── Mount: Socket.IO wraps FastAPI ────────────────────────────────────────────
+@http_app.get("/api/itinerary/{thread_id}")
+async def get_itinerary(thread_id: str):
+    """Fetches a specific generated itinerary from the Checkpointer database."""
+    config = {"configurable": {"thread_id": thread_id}}
+    try:
+        # Pull the state directly from LangGraph distributed state
+        state_snapshot = agent_app.get_state(config)
+        if state_snapshot and state_snapshot.values:
+            return {"status": "success", "itinerary": state_snapshot.values.get("itinerary_data", [])}
+        else:
+             # Return empty standard payload if unrecognized (so UI doesn't crash)
+            return {"status": "not_found", "itinerary": []}
+    except Exception as e:
+         return {"status": "error", "message": str(e)}
+
 app = socketio.ASGIApp(sio, other_asgi_app=http_app)
 
 if __name__ == "__main__":

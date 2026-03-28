@@ -6,7 +6,8 @@ import AgentTerminal from "@/components/AgentTerminal";
 import MapView from "@/components/MapView";
 import ResultTimeline, { TimelineItem } from "@/components/ResultTimeline";
 import HITLModal from "@/components/HITLModal";
-import { Plane, Search, Sparkles, Send, Map as MapIcon, Calendar, Zap } from "lucide-react";
+import ChatPanel from "@/components/ChatPanel";
+import { Plane, Search, Sparkles, Send, Map as MapIcon, Calendar, Zap, Share2 } from "lucide-react";
 
 type ActiveView = "map" | "grid";
 
@@ -78,17 +79,16 @@ export default function Home() {
   const mapDestination = flightItem?.destination || "NBO";
 
   return (
-    <main className="min-h-screen bg-[#050505] text-zinc-200 selection:bg-sky-500/30">
+    <div className="h-full max-h-screen w-full flex flex-col p-4 lg:p-6 bg-[#050505] text-zinc-200 overflow-hidden box-border">
       {/* Background Decor */}
       <div className="fixed inset-0 pointer-events-none opacity-20 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-sky-600/20 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[120px]" />
       </div>
 
-      <div className="max-w-[1600px] mx-auto p-4 md:p-6 relative grid grid-cols-12 gap-6 h-screen max-h-[100vh] overflow-hidden">
-
+      <div className="w-full max-w-[1600px] mx-auto relative flex flex-col lg:flex-row gap-6 flex-1 min-h-0 overflow-hidden">
         {/* ─── Left Sidebar ─────────────────────────────────────────────── */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-5 h-full overflow-hidden">
+        <div className="w-full lg:w-[32%] xl:w-1/3 flex flex-col gap-4 h-full overflow-hidden shrink-0">
 
           {/* Header */}
           <header className="flex items-center gap-3 shrink-0">
@@ -163,14 +163,18 @@ export default function Home() {
             </form>
           </section>
 
-          {/* Agent Terminal */}
+          {/* Agent Terminal or Interactive Chat */}
           <section className="flex-1 overflow-hidden min-h-0">
-            <AgentTerminal thoughts={thoughts} />
+            {itinerary.length > 0 && !isSearching ? (
+              <ChatPanel />
+            ) : (
+              <AgentTerminal thoughts={thoughts} />
+            )}
           </section>
         </div>
 
         {/* ─── Main Content ──────────────────────────────────────────────── */}
-        <div className="col-span-12 lg:col-span-8 flex flex-col gap-5 h-full overflow-hidden">
+        <div className="w-full lg:w-[68%] xl:w-2/3 flex flex-col gap-4 h-full overflow-hidden">
 
           {/* Top bar with view toggle */}
           <div className="flex items-center justify-between shrink-0">
@@ -178,32 +182,41 @@ export default function Home() {
               <button
                 id="view-map-btn"
                 onClick={() => setActiveView("map")}
-                className={`px-5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+                className={`px-3 sm:px-5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
                   activeView === "map"
                     ? "bg-zinc-800 text-white shadow-inner"
                     : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 <MapIcon className="w-4 h-4" />
-                Interactive Map
+                Map
               </button>
               <button
                 id="view-results-btn"
                 onClick={() => setActiveView("grid")}
-                className={`px-5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+                className={`px-3 sm:px-5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
                   activeView === "grid"
                     ? "bg-zinc-800 text-white shadow-inner"
                     : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 <Calendar className="w-4 h-4" />
-                Flight Grid
+                Grid
                 {itinerary.length > 0 && (
                   <span className="ml-1 px-1.5 py-0.5 bg-sky-500 text-white rounded-full text-[9px] font-bold leading-none">
                     {itinerary.length}
                   </span>
                 )}
               </button>
+              {itinerary.length > 0 && (
+                <button
+                  onClick={() => alert(`Share URL: http://localhost:3000/trip/${socket?.id}`)}
+                  className="px-3 sm:px-5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 text-sky-400 hover:text-sky-300 hover:bg-zinc-800 transition-all border-l border-zinc-800 ml-1"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  Share
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-4 text-xs font-bold text-zinc-500 uppercase">
@@ -273,6 +286,6 @@ export default function Home() {
         agent={hitlRequest?.agent || ""}
         onResponse={handleHITLResponse}
       />
-    </main>
+    </div>
   );
 }

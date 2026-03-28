@@ -1,4 +1,5 @@
 from tools.query_parser import IATA_NAMES
+from tools.browser import BrowserTool
 
 # ── Global hotel dataset keyed by destination IATA ───────────────────────────
 HOTEL_DATA: dict[str, list[dict]] = {
@@ -139,36 +140,51 @@ async def run_scout(state: dict):
     dest_label = IATA_NAMES.get(destination, destination)
 
     state["thought_trace"].append(
-        f"Scout is searching for premium accommodations in {dest_label}..."
+        f"Scout is launching headless Chromium to scrape live accommodations in {dest_label}..."
     )
 
-    hotels = HOTEL_DATA.get(destination)
-    if not hotels:
-        # Generate a plausible generic hotel at airport coords
-        coords = AIRPORT_COORDS.get(destination, (0.0, 0.0))
-        hotels = [_generic_hotel(destination, coords[0], coords[1])]
+    try:
+        browser = BrowserTool()
+        scraped_hotels = await browser.search_hotels(dest_label)
+    except Exception as e:
+        scraped_hotels = []
+        state["thought_trace"].append(f"Browser scrape encountered an issue: {e}. Falling back to smart mock data.")
+
+    if scraped_hotels:
         state["thought_trace"].append(
-            f"Scout used global index for {dest_label} — found a business hotel near the airport."
+            f"Playwright successfully scraped {len(scraped_hotels)} real-time properties from the open web."
         )
+        best_hotel = scraped_hotels[0]
     else:
-        state["thought_trace"].append(
-            f"Scout found {len(hotels)} curated hotel(s) in {dest_label}."
-        )
+        # Fallback to local high-fidelity dataset
+        hotels = HOTEL_DATA.get(destination)
+        if not hotels:
+            # Generate a plausible generic hotel at airport coords
+            coords = AIRPORT_COORDS.get(destination, (0.0, 0.0))
+            hotels = [_generic_hotel(destination, coords[0], coords[1])]
+            state["thought_trace"].append(
+                f"Scout used global index for {dest_label} — found a business hotel near the airport."
+            )
+        else:
+            state["thought_trace"].append(
+                f"Scout fell back to curated static hotel(s) in {dest_label}."
+            )
+        best_hotel = hotels[0]
 
-    best_hotel = hotels[0]
     state["thought_trace"].append(
-        f"Scout recommends: {best_hotel['name']} ({best_hotel['price']} · "
-        f"{'★' * int(best_hotel['rating'])})."
+        f"Scout recommends: {best_hotel['name']} ({best_hotel.get('price', 'Call for price')})."
     )
+
+    fallback_coords = AIRPORT_COORDS.get(destination, (0.0, 0.0))
 
     state["itinerary_data"].append({
         "type": "hotel",
         "name": best_hotel["name"],
-        "price": best_hotel["price"],
-        "rating": best_hotel["rating"],
-        "lat": best_hotel["lat"],
-        "lng": best_hotel["lng"],
-        "details": best_hotel["desc"],
+        "price": best_hotel.get("price", "Call for price"),
+        "rating": best_hotel.get("rating", 4.5),
+        "lat": best_hotel.get("lat", fallback_coords[0]),
+        "lng": best_hotel.get("lng", fallback_coords[1]),
+        "details": best_hotel.get("desc", ""),
     })
 
     return state

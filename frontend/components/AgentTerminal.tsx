@@ -15,11 +15,21 @@ interface AgentTerminalProps {
 const AgentTerminal: React.FC<AgentTerminalProps> = ({ thoughts }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = React.useState(true);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    // Disable auto-tracking if the user manually scrolled up
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
+    setIsAutoScrollEnabled(isAtBottom);
+  };
+
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && isAutoScrollEnabled) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [thoughts]);
+  }, [thoughts, isAutoScrollEnabled]);
 
   const getAgentIcon = (agent: string) => {
     switch (agent.toLowerCase()) {
@@ -43,15 +53,28 @@ const AgentTerminal: React.FC<AgentTerminalProps> = ({ thoughts }) => {
           <Terminal className="w-4 h-4 text-zinc-400" />
           <span className="text-zinc-200 uppercase tracking-tighter font-bold">Live Thought Trace</span>
         </div>
-        <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-          <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 animate-pulse" />
+        <div className="flex items-center gap-4">
+          <button 
+             onClick={() => setIsAutoScrollEnabled(!isAutoScrollEnabled)}
+             className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border transition-colors ${
+               isAutoScrollEnabled 
+                 ? "bg-sky-500/10 text-sky-400 border-sky-500/20 hover:bg-sky-500/20" 
+                 : "bg-zinc-800 text-zinc-500 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-300"
+             }`}
+          >
+             <div className={`w-1.5 h-1.5 rounded-full ${isAutoScrollEnabled ? 'bg-sky-400 animate-pulse' : 'bg-zinc-600'}`} />
+             Auto Scroll
+          </button>
+          <div className="flex gap-1.5">
+            <div className={`w-2 h-2 rounded-full ${isAutoScrollEnabled ? 'bg-zinc-700' : 'bg-zinc-800'}`} />
+            <div className={`w-2 h-2 rounded-full ${isAutoScrollEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-700'}`} />
+          </div>
         </div>
       </div>
       
       <div 
         ref={scrollRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-zinc-800"
       >
         {thoughts.length === 0 && (

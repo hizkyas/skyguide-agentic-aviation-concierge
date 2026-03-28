@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { Plane, Building, MapPin, Clock, ArrowRight } from "lucide-react";
+import { Plane, Building, MapPin, Clock, ArrowRight, Sun } from "lucide-react";
 
 export interface TimelineItem {
-  type: "flight" | "hotel";
+  type: "flight" | "hotel" | "weather";
   details?: string;
   origin?: string;
   destination?: string;
@@ -42,6 +42,8 @@ const ResultTimeline: React.FC<ResultTimelineProps> = ({ items }) => {
             <div className="absolute left-0 top-1 w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center z-10 group-hover:border-zinc-700 transition-colors">
               {item.type === "flight" ? (
                 <Plane className="w-5 h-5 text-sky-400" />
+              ) : item.type === "weather" ? (
+                <Sun className="w-5 h-5 text-amber-500" />
               ) : (
                 <Building className="w-5 h-5 text-emerald-400" />
               )}
@@ -50,7 +52,7 @@ const ResultTimeline: React.FC<ResultTimelineProps> = ({ items }) => {
             <div className="p-4 bg-zinc-800/50 border border-zinc-700/50 rounded-lg group-hover:bg-zinc-800 transition-colors">
               <div className="flex justify-between items-start mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                  {item.type === "flight" ? "Flight Segment" : "Accommodation"}
+                  {item.type === "flight" ? "Flight Segment" : item.type === "weather" ? "Live Forecast" : "Accommodation"}
                 </span>
                 {item.price && (
                   <span className="text-sm font-bold text-emerald-400">{item.price}</span>
@@ -85,6 +87,13 @@ const ResultTimeline: React.FC<ResultTimelineProps> = ({ items }) => {
                     </div>
                     <div className="font-medium text-zinc-300">{item.details}</div>
                   </div>
+                </div>
+              ) : item.type === "weather" ? (
+                <div className="space-y-2">
+                  <div className="text-lg font-bold text-amber-400">{item.name}</div>
+                  <p className="text-zinc-400 italic text-sm leading-relaxed">
+                    {item.details}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">

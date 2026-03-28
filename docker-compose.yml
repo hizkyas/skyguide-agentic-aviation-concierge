@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: skyguide_postgres
+    environment:
+      POSTGRES_USER: skyguide
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: skyguide_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skyguide -d skyguide_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: skyguide_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: skyguide_api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://skyguide:password123@db:5432/skyguide_db
+      - REDIS_URL=redis://redis:6379/0
+      - AVIATIONSTACK_API_KEY=${AVIATIONSTACK_API_KEY}
+    ports:
+      - "8001:8001"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: skyguide_web
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8001
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  redisdata:
